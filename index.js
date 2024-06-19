@@ -112,18 +112,19 @@ app.patch("/user/:email", verifyToken, async (req, res) => {
   return res.send(result);
 });
 
-app.post("/recipe", async (req, res) => {
-  try {
-    const recipeData = req.body;
-    console.log("Adding recipe:", recipeData);
-    const result = await recipeCollection.insertOne(recipeData);
-    return res.send(result);
-  } catch (error) {
-    console.error("Error adding recipe:", error);
-    return res.status(500).send("An error occurred while adding the recipe");
-  }
-});
+// app.post("/recipe", async (req, res) => {
+//   try {
+//     const recipeData = req.body;
+//     console.log("Adding recipe:", recipeData);
+//     const result = await recipeCollection.insertOne(recipeData);
+//     return res.send(result);
+//   } catch (error) {
+//     console.error("Error adding recipe:", error);
+//     return res.status(500).send("An error occurred while adding the recipe");
+//   }
+// });
 
+// admin
 app.get("/users", verifyToken, async (req, res) => {
   try {
     const users = await usersCollection.find().toArray();
@@ -135,6 +136,84 @@ app.get("/users", verifyToken, async (req, res) => {
   } catch (error) {
     console.error("Error fetching users:", error);
     res.status(500).send("An error occurred while fetching users");
+  }
+});
+
+// // Update User Status
+app.patch("/users/:id/status", verifyToken, async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  if (!["active", "inactive", "deleted"].includes(status)) {
+    return res.status(400).send("Invalid status value");
+  }
+
+  try {
+    const result = await usersCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { status, isDeleted: status === "deleted" } }
+    );
+    if (result.modifiedCount === 1) {
+      return res.send({ message: "User status updated successfully" });
+    } else {
+      return res.status(404).send("User not found");
+    }
+  } catch (error) {
+    console.error("Error updating user status:", error);
+    res.status(500).send("An error occurred while updating user status");
+  }
+});
+
+// Update User Role to Admin
+app.patch("/users/:id/make-admin", verifyToken, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await usersCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { isAdmin: 1 } } // Assuming isAdmin is 1 for admin
+    );
+    if (result.modifiedCount === 1) {
+      return res.send({ message: "User role updated to admin successfully" });
+    } else {
+      return res.status(404).send("User not found");
+    }
+  } catch (error) {
+    console.error("Error updating user role:", error);
+    res.status(500).send("An error occurred while updating user role");
+  }
+});
+
+// Toggle User Admin Status
+app.patch("/users/:id/toggle-admin", verifyToken, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Find the current admin status
+    const user = await usersCollection.findOne({ _id: new ObjectId(id) });
+    if (!user) {
+      return res.status(404).send("User not found");
+    }
+
+    // Toggle the admin status
+    const newIsAdmin = user.isAdmin === 1 ? 0 : 1;
+
+    const result = await usersCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { isAdmin: newIsAdmin } }
+    );
+
+    if (result.modifiedCount === 1) {
+      return res.send({
+        message: "User admin status updated successfully",
+        newIsAdmin,
+      });
+    } else {
+      return res.status(500).send("Failed to update user admin status");
+    }
+  } catch (error) {
+    console.error("Error updating user admin status:", error);
+    res.status(500).send("An error occurred while updating user admin status");
   }
 });
 
@@ -153,15 +232,15 @@ app.get("/users/:id", async (req, res) => {
   }
 });
 
-app.patch("/recipes/:id", async (req, res) => {
-  const id = req.params.id;
-  const updatedData = req.body;
-  const result = await recipeCollection.updateOne(
-    { _id: new ObjectId(id) },
-    { $set: updatedData }
-  );
-  return res.send(result);
-});
+// app.patch("/recipes/:id", async (req, res) => {
+//   const id = req.params.id;
+//   const updatedData = req.body;
+//   const result = await recipeCollection.updateOne(
+//     { _id: new ObjectId(id) },
+//     { $set: updatedData }
+//   );
+//   return res.send(result);
+// });
 
 app.patch("/users/soft-delete/:id", verifyToken, async (req, res) => {
   const id = req.params.id;
@@ -267,36 +346,25 @@ app.get("/stats", async (req, res) => {
     const totalParents = await usersCollection.countDocuments({
       role: "Parents",
     });
-    const totalRecipes = await recipeCollection.countDocuments();
-    const totalCategories = await categories.countDocuments();
+    const activeUsersCount = await usersCollection.countDocuments({
+      isDeleted: { $ne: true },
+    });
 
-    const categoryWiseRecipes = await categories
-      .aggregate([
-        {
-          $lookup: {
-            from: "recipeCollection",
-            localField: "title",
-            foreignField: "category",
-            as: "recipes",
-          },
-        },
-        {
-          $project: {
-            _id: 0,
-            category: "$title",
-            recipeCount: { $size: "$recipes" },
-          },
-        },
-      ])
-      .toArray();
+    const deletedUsersCount = await usersCollection.countDocuments({
+      isDeleted: true,
+    });
+
+    const totalAdmins = await usersCollection.countDocuments({
+      isAdmin: 1,
+    });
 
     return res.json({
       totalUsers,
       totalStudents,
       totalParents,
-      totalRecipes,
-      totalCategories,
-      categoryWiseRecipes,
+      activeUsersCount,
+      deletedUsersCount,
+      totalAdmins,
     });
   } catch (error) {
     console.error("Error fetching stats:", error);
