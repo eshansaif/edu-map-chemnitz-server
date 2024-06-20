@@ -579,7 +579,8 @@ app.delete("/user/favorite/:email/:locationId", async (req, res) => {
   }
 });
 
-app.get("/stats", async (req, res) => {
+// stats data for bar chart of users
+app.get("/user-stats", async (req, res) => {
   try {
     const totalUsers = await usersCollection.countDocuments();
     const totalStudents = await usersCollection.countDocuments({
@@ -611,6 +612,31 @@ app.get("/stats", async (req, res) => {
   } catch (error) {
     console.error("Error fetching stats:", error);
     res.status(500).json({ error: "An error occurred while fetching stats" });
+  }
+});
+
+// stats data for pie chart of locations
+app.get("/location-stats", async (req, res) => {
+  try {
+    const schoolCount = await schoolsLocationsCollection.countDocuments();
+    const kindergartenCount =
+      await kindergartensLocationsCollection.countDocuments();
+    const socialChildProjectsCount =
+      await socialChildProjectsLocationsCollection.countDocuments();
+    const socialTeenagerProjectsCount =
+      await socialTeenagerProjectsLocationsCollection.countDocuments();
+
+    return res.json({
+      schoolCount,
+      kindergartenCount,
+      socialChildProjectsCount,
+      socialTeenagerProjectsCount,
+    });
+  } catch (error) {
+    console.error("Error fetching location stats:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while fetching location stats" });
   }
 });
 
