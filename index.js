@@ -4,6 +4,7 @@ const app = express();
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const { default: axios } = require("axios");
 
 const port = process.env.PORT || 5000;
 
@@ -47,7 +48,11 @@ const client = new MongoClient(uri, {
   },
 });
 
-let recipeCollection, categories, usersCollection, favorites;
+let recipeCollection,
+  categories,
+  usersCollection,
+  favorites,
+  socialTeenagerProjectsLocationsCollection;
 
 const dbConnect = () => {
   try {
@@ -63,6 +68,9 @@ usersCollection = client.db("chemnitzMapDB").collection("usersCollection");
 categories = client.db("chemnitzMapDB").collection("categories");
 recipeCollection = client.db("chemnitzMapDB").collection("recipeCollection");
 favorites = client.db("chemnitzMapDB").collection("favorites");
+socialTeenagerProjectsLocationsCollection = client
+  .db("chemnitzMapDB")
+  .collection("socialTeenagerProjectsLocationsCollection");
 
 app.get("/", (req, res) => {
   res.send("Welcome to the server");
@@ -266,6 +274,52 @@ app.delete("/users/:id", async (req, res) => {
   } catch (error) {
     console.error("Error deleting user:", error);
     res.status(500).send("An error occurred while deleting the user");
+  }
+});
+
+//Add social teenager projects Locations
+
+// Endpoint to add new location
+app.post(
+  "/locations/social-teenager-projects",
+  verifyToken,
+  async (req, res) => {
+    const locationData = req.body;
+    try {
+      const result = await socialTeenagerProjectsLocationsCollection.insertOne(
+        locationData
+      );
+      res.send({
+        status: "success",
+        message: "Location added successfully",
+        result,
+      });
+    } catch (error) {
+      console.error("Error adding location:", error);
+      res.status(500).send("An error occurred while adding the location");
+    }
+  }
+);
+
+// Endpoint to fetch all locations (merge ArcGIS API and MongoDB data)
+app.get("/locations/social-teenager-projects", async (req, res) => {
+  try {
+    const arcgisResponse = await axios.get(
+      "https://services6.arcgis.com/jiszdsDupTUO3fSM/arcgis/rest/services/Jugendberufshilfen_FL_1/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson"
+    );
+    const arcgisLocations = arcgisResponse.data.features;
+    const dbLocations = await socialTeenagerProjectsLocationsCollection
+      .find()
+      .toArray();
+
+    const allLocations = {
+      type: "FeatureCollection",
+      features: [...arcgisLocations, ...dbLocations],
+    };
+    res.json(allLocations);
+  } catch (error) {
+    console.error("Error fetching locations:", error);
+    res.status(500).send("An error occurred while fetching locations");
   }
 });
 
