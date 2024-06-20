@@ -340,6 +340,61 @@ app.delete("/location/school/:id", async (req, res) => {
     res.status(500).send("An error occurred while deleting the user");
   }
 });
+//Social Child Projects Locations
+
+// Endpoint to add new school location
+app.post("/locations/social-child-projects", verifyToken, async (req, res) => {
+  const locationData = req.body;
+  try {
+    const result = await socialChildProjectsLocationsCollection.insertOne(
+      locationData
+    );
+    res.send({
+      status: "success",
+      message: "Location added successfully",
+      result,
+    });
+  } catch (error) {
+    console.error("Error adding location:", error);
+    res.status(500).send("An error occurred while adding the location");
+  }
+});
+
+// Endpoint to fetch all schools locations (merge ArcGIS API and MongoDB data)
+app.get("/locations/social-child-projects", async (req, res) => {
+  try {
+    const arcgisResponse = await axios.get(
+      "https://services6.arcgis.com/jiszdsDupTUO3fSM/arcgis/rest/services/Schulsozialarbeit_FL_1/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson"
+    );
+    const arcgisLocations = arcgisResponse.data.features;
+    const dbLocations = await socialChildProjectsLocationsCollection
+      .find()
+      .toArray();
+
+    const allLocations = {
+      type: "FeatureCollection",
+      features: [...arcgisLocations, ...dbLocations],
+    };
+    res.json(allLocations);
+  } catch (error) {
+    console.error("Error fetching locations:", error);
+    res.status(500).send("An error occurred while fetching locations");
+  }
+});
+
+// Delete school project
+app.delete("/location/social-child-project/:id", async (req, res) => {
+  const id = req.params.id;
+  try {
+    const result = await socialChildProjectsLocationsCollection.deleteOne({
+      _id: new ObjectId(id),
+    });
+    return res.send(result);
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    res.status(500).send("An error occurred while deleting the user");
+  }
+});
 
 //Add social teenager projects Locations
 
