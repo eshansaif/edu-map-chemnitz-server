@@ -9,7 +9,9 @@ const { default: axios } = require("axios");
 const port = process.env.PORT || 5000;
 
 app.use(
-  cors({ origin: ["http://localhost:5173", "https://roshui-ghor.web.app"] })
+  cors({
+    origin: ["http://localhost:5173", "https://chemnitz-map-app.web.app"],
+  })
 );
 app.use(express.json());
 
