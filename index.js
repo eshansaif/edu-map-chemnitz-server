@@ -48,9 +48,7 @@ const client = new MongoClient(uri, {
   },
 });
 
-let recipeCollection,
-  categories,
-  usersCollection,
+let usersCollection,
   favorites,
   schoolsLocationsCollection,
   kindergartensLocationsCollection,
@@ -68,8 +66,6 @@ const dbConnect = () => {
 dbConnect();
 
 usersCollection = client.db("chemnitzMapDB").collection("usersCollection");
-categories = client.db("chemnitzMapDB").collection("categories");
-recipeCollection = client.db("chemnitzMapDB").collection("recipeCollection");
 favorites = client.db("chemnitzMapDB").collection("favorites");
 schoolsLocationsCollection = client
   .db("chemnitzMapDB")
@@ -131,18 +127,6 @@ app.patch("/user/:email", verifyToken, async (req, res) => {
   );
   return res.send(result);
 });
-
-// app.post("/recipe", async (req, res) => {
-//   try {
-//     const recipeData = req.body;
-//     console.log("Adding recipe:", recipeData);
-//     const result = await recipeCollection.insertOne(recipeData);
-//     return res.send(result);
-//   } catch (error) {
-//     console.error("Error adding recipe:", error);
-//     return res.status(500).send("An error occurred while adding the recipe");
-//   }
-// });
 
 // admin
 app.get("/users", verifyToken, async (req, res) => {
@@ -251,16 +235,6 @@ app.get("/users/:id", async (req, res) => {
       .json({ error: "An error occurred while fetching the user" });
   }
 });
-
-// app.patch("/recipes/:id", async (req, res) => {
-//   const id = req.params.id;
-//   const updatedData = req.body;
-//   const result = await recipeCollection.updateOne(
-//     { _id: new ObjectId(id) },
-//     { $set: updatedData }
-//   );
-//   return res.send(result);
-// });
 
 app.patch("/users/soft-delete/:id", verifyToken, async (req, res) => {
   const id = req.params.id;
