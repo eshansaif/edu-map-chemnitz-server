@@ -323,6 +323,20 @@ app.get("/locations/social-teenager-projects", async (req, res) => {
   }
 });
 
+// Delete Social Teenager project
+app.delete("/location/social-teenager-project/:id", async (req, res) => {
+  const id = req.params.id;
+  try {
+    const result = await socialTeenagerProjectsLocationsCollection.deleteOne({
+      _id: new ObjectId(id),
+    });
+    return res.send(result);
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    res.status(500).send("An error occurred while deleting the user");
+  }
+});
+
 // Add a new endpoint to handle adding a location to favorites
 app.post("/user/favorite", async (req, res) => {
   const { userEmail, location } = req.body;
